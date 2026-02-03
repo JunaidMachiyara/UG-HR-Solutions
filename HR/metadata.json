@@ -1,0 +1,5 @@
+{
+  "name": "HR",
+  "description": "A comprehensive system for managing used clothing inventory, from purchasing original materials to sorting, production, sales, and basic accounting.",
+  "requestFramePermissions": []
+}
