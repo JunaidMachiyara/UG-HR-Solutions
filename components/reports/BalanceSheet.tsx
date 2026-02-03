@@ -1,10 +1,9 @@
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../../context/DataContext.tsx';
 import ReportToolbar from './ReportToolbar.tsx';
 import { OriginalPurchased, PackingType, Currency } from '../../types.ts';
-// FIX: Correctly import the exported ReportKey type.
-import { ReportKey } from '../ReportsModule.tsx';
+// FIX: Changed from '../ReportsModule.tsx' to './ReportsModule.tsx' because they are in the same folder.
+import { ReportKey } from './ReportsModule.tsx';
 
 interface BalanceSheetProps {
     onNavigate: (key: ReportKey, filters?: any) => void;
@@ -102,7 +101,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ onNavigate }) => {
         const expenses = entries.filter(je => expenseAccounts.includes(je.account)).reduce((sum, je) => sum + je.debit - je.credit, 0);
         const netIncome = revenue - expenses;
 
-        // ASSETS (Debit balances, usually positive)
+        // ASSETS
         const cash = state.cashAccounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
         const bank = state.banks.reduce((sum, b) => sum + getAccountBalance(b.id), 0);
         const receivables = getAccountBalance(state.receivableAccounts[0]?.id);
@@ -112,26 +111,26 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ onNavigate }) => {
         const packingMaterialInventory = getAccountBalance(state.packingMaterialInventoryAccounts[0]?.id);
         
         const totalCurrentAssets = cash + bank + receivables + finishedGoodsInventoryValue + rawMaterialInventoryValue + packingMaterialInventory;
-        const totalNonCurrentAssets = investments + fixedAssets + accumulatedDepreciation; // accumulatedDepreciation is negative here, which is correct for Net Book Value
+        const totalNonCurrentAssets = investments + fixedAssets + accumulatedDepreciation;
         const totalAssets = totalCurrentAssets + totalNonCurrentAssets;
 
-        // LIABILITIES (Credit balances, flip sign to be positive for display)
+        // LIABILITIES
         const payablesRaw = getAccountBalance(state.payableAccounts.find(acc => acc.name === 'Accounts Payable')?.id || '') + getAccountBalance(state.payableAccounts.find(acc => acc.name === 'Customs Charges Payable')?.id || '');
-        const payables = -payablesRaw; // Flip sign to show positive Liability
+        const payables = -payablesRaw;
         
         const loansRaw = calculateTotalBalance(state.loanAccounts);
-        const loans = -loansRaw; // Flip sign
+        const loans = -loansRaw;
         
         const totalCurrentLiabilities = payables;
         const totalLongTermLiabilities = loans;
         const totalLiabilities = totalCurrentLiabilities + totalLongTermLiabilities;
 
-        // EQUITY (Credit balances, flip sign to be positive for display)
+        // EQUITY
         const capitalRaw = getAccountBalance(state.capitalAccounts.find(c => c.id === 'CAP-001')?.id || '');
-        const capital = -capitalRaw; // Flip sign
+        const capital = -capitalRaw;
         
         const openingBalanceEquityRaw = getAccountBalance(state.capitalAccounts.find(c => c.id === 'CAP-002')?.id || '');
-        const openingBalanceEquity = -openingBalanceEquityRaw; // Flip sign
+        const openingBalanceEquity = -openingBalanceEquityRaw;
         
         const inventoryValueNotOnBooks = (rawMaterialInventoryValue + finishedGoodsInventoryValue) - getAccountBalance(state.inventoryAccounts[0]?.id);
         const totalEquity = capital + openingBalanceEquity + netIncome + inventoryValueNotOnBooks;
@@ -189,12 +188,12 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ onNavigate }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Assets */}
                 <div className="space-y-4">
-                    <h3 className="text-xl font-bold text-slate-800 border-b-2 pb-1">Assets (What You Have)</h3>
+                    <h3 className="text-xl font-bold text-slate-800 border-b-2 pb-1">Assets</h3>
                     <div className="space-y-2">
                         <h4 className="font-semibold text-slate-700 text-lg">Current Assets</h4>
                         <AccountRow label="Cash" value={assets.cash} onClick={() => onNavigate('cash-bank/cash-book', { endDate: asOfDate })} />
                         <AccountRow label="Bank" value={assets.bank} onClick={() => onNavigate('cash-bank/bank-book', { endDate: asOfDate })} />
-                        <AccountRow label="Accounts Receivable (Money Owed to You)" value={assets.receivables} onClick={() => onNavigate('ledger/main', { accountType: 'Customer', endDate: asOfDate })} />
+                        <AccountRow label="Accounts Receivable" value={assets.receivables} onClick={() => onNavigate('ledger/main', { accountType: 'Customer', endDate: asOfDate })} />
                         <AccountRow label="Finished Goods Inventory" value={assets.finishedGoodsInventory} onClick={() => onNavigate('item-performance/stock-worth', { endDate: asOfDate })} />
                         <AccountRow label="Raw Material Inventory" value={assets.rawMaterialInventory} onClick={() => onNavigate('original-stock-v1/main')} />
                         <AccountRow label="Packing Material Inventory" value={assets.packingMaterialInventory} onClick={() => onNavigate('ledger/main', { accountType: 'Inventory', accountId: 'INV-PM-001', endDate: asOfDate })}/>
@@ -211,10 +210,10 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ onNavigate }) => {
                 </div>
                 {/* Liabilities & Equity */}
                 <div className="space-y-4">
-                    <h3 className="text-xl font-bold text-slate-800 border-b-2 pb-1">Liabilities & Equity (Who Owns It)</h3>
+                    <h3 className="text-xl font-bold text-slate-800 border-b-2 pb-1">Liabilities & Equity</h3>
                     <div className="space-y-2">
                         <h4 className="font-semibold text-slate-700 text-lg">Current Liabilities</h4>
-                        <AccountRow label="Accounts Payable (Money You Owe)" value={liabilities.payables} onClick={() => onNavigate('ledger/main', { accountType: 'Payable', accountId: 'AP-001', endDate: asOfDate })} />
+                        <AccountRow label="Accounts Payable" value={liabilities.payables} onClick={() => onNavigate('ledger/main', { accountType: 'Payable', accountId: 'AP-001', endDate: asOfDate })} />
                         <AccountRow label="Total Current Liabilities" value={liabilities.totalCurrentLiabilities} isSubtotal />
                     </div>
                     <div className="space-y-2">
@@ -228,7 +227,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({ onNavigate }) => {
                         <h4 className="font-semibold text-slate-700 text-lg">Equity</h4>
                         <AccountRow label="Owner's Capital" value={equity.capital} onClick={() => onNavigate('ledger/main', { accountType: 'Capital', accountId: 'CAP-001', endDate: asOfDate })}/>
                         <AccountRow label="Opening Balance Equity" value={equity.openingBalanceEquity} onClick={() => onNavigate('ledger/main', { accountType: 'Capital', accountId: 'CAP-002', endDate: asOfDate })}/>
-                        <AccountRow label="Retained Earnings (Net Income)" value={equity.retainedEarnings} onClick={() => onNavigate('financial/profit-loss', { endDate: asOfDate })}/>
+                        <AccountRow label="Retained Earnings" value={equity.retainedEarnings} onClick={() => onNavigate('financial/profit-loss', { endDate: asOfDate })}/>
                         <AccountRow label="Inventory Adjustment" value={equity.inventoryAdjustment} />
                         <AccountRow label="Total Equity" value={equity.totalEquity} isSubtotal />
                     </div>

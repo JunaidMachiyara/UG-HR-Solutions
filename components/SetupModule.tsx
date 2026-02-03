@@ -195,7 +195,6 @@ const UserManagement: React.FC = () => {
 };
 
 // --- MAIN SETUP MODULE ---
-// FIX: Added missing SetupModuleProps interface to resolve compilation error.
 interface SetupModuleProps {
     initialSection?: string | null;
     setModule?: (module: Module) => void;
@@ -225,7 +224,6 @@ const SetupModule: React.FC<SetupModuleProps> = ({ initialSection }) => {
                         >
                             User Management
                         </button>
-                        {/* More setup modules can be added here by the user later */}
                     </nav>
                 </div>
             </aside>
@@ -452,9 +450,9 @@ const VehicleManagement: React.FC = () => {
             {isModalOpen && editingVehicle && (
                 <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingVehicle.id ? "Edit Vehicle" : "Add Vehicle"}>
                     <div className="space-y-4">
-                        <div><label className="block text-sm font-medium text-slate-700">Plate Number</label><input type="text" value={editingVehicle.plateNumber || ''} onChange={e => setEditingVehicle({ ...editingVehicle, plateNumber: e.target.value })} className="w-full p-2 border rounded-md" /></div>
-                        <div><label className="block text-sm font-medium text-slate-700">Model</label><input type="text" value={editingVehicle.model || ''} onChange={e => setEditingVehicle({ ...editingVehicle, model: e.target.value })} className="w-full p-2 border rounded-md" /></div>
-                        <div><label className="block text-sm font-medium text-slate-700">Status</label><select value={editingVehicle.status} onChange={e => setEditingVehicle({ ...editingVehicle, status: e.target.value as any })} className="w-full p-2 border rounded-md">{Object.values(VehicleStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Plate Number</label><input type="text" value={editingVehicle.plateNumber || ''} onChange={e => setEditingVehicle({ ...editingVehicle, plateNumber: e.target.value })} className="w-full p-2 border rounded-md" /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Model</label><input type="text" value={editingVehicle.model || ''} onChange={e => setEditingVehicle({ ...editingVehicle, model: e.target.value })} className="w-full p-2 border rounded-md" /></div>
+                        <div><label className="block text-sm font-medium text-slate-700 mb-1">Status</label><select value={editingVehicle.status} onChange={e => setEditingVehicle({ ...editingVehicle, status: e.target.value as any })} className="w-full p-2 border rounded-md">{Object.values(VehicleStatus).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                     </div>
                     <div className="flex justify-end gap-2 pt-6">
                         <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-200 rounded-md">Cancel</button>

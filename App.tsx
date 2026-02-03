@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import SetupModule, { HRModule } from './components/SetupModule.tsx';
-import { useData, auth, db, allPermissions } from './context/DataContext.tsx';
+import { useData, auth, db, allPermissions, mainModules } from './context/DataContext.tsx';
 import { Module, UserProfile, OriginalOpening, Production } from './types.ts';
 import Modal from './components/ui/Modal.tsx';
 import TestPage from './components/TestPage.tsx';
 import ChatModule from './components/ChatModule.tsx';
-// FIX: Updated import casing to match components/Chatbot.tsx and resolve compilation conflict
-import Chatbot from './components/Chatbot.tsx';
+// Standardized import path and casing
+// Fix: Use lowercase 'chatbot.tsx' to match the project files and avoid case-sensitivity conflicts.
+import Chatbot from './components/chatbot.tsx';
 
 // --- START: Unread Message Hooks ---
 function useUnreadMessages(userProfile: UserProfile | null = null) {
@@ -224,10 +225,7 @@ const LoginScreen: React.FC<{ setNotification: (n: any) => void; }> = ({ setNoti
     );
 };
 
-const mainModules: Module[] = ['setup', 'hr', 'chat'];
-
 const App: React.FC = () => {
-    // Start on Setup module as others are removed
     const [activeModule, setActiveModule] = useState<Module>('setup');
     const [activeSubView, setActiveSubView] = useState<string | null>(null);
     const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -458,7 +456,7 @@ const App: React.FC = () => {
                                 {saveStatus === 'saving' && <span className="text-xs text-yellow-300 animate-pulse flex items-center justify-end">Saving...</span>}
                                 {saveStatus === 'synced' && (
                                     <span className="text-xs text-green-300 flex items-center justify-end">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                         Saved
                                     </span>
                                 )}
