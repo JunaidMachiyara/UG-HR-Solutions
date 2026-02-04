@@ -183,7 +183,7 @@ export async function handler(event: { httpMethod: string; body: string | null }
         }
 
         // Fix: Use 'const ai = new GoogleGenAI({apiKey: process.env.API_KEY});' as per guidelines
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
         // Fix: Use 'gemini-3-pro-preview' for tasks involving reasoning and data interaction
         const response = await ai.models.generateContent({

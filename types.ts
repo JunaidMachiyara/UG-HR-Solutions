@@ -172,6 +172,7 @@ export interface ExpenseAccount extends Account {
 
 export interface Employee {
     id: string;
+    employeeType: 'Office' | 'Labour';
     fullName: string;
     dateOfBirth: string;
     joiningDate: string;
@@ -212,6 +213,8 @@ export interface HRTask {
     creationDate: string;
     completionDate?: string;
     isAcknowledged?: boolean;
+    assignedToId?: string;
+    assignedToName?: string;
 }
 
 export interface HREnquiry {

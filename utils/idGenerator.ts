@@ -31,7 +31,10 @@ export const generateLoanAccountId = (accounts: LoanAccount[]): string => genera
 export const generateCapitalAccountId = (accounts: CapitalAccount[]): string => generateId('CAP', accounts);
 export const generateInvestmentAccountId = (accounts: InvestmentAccount[]): string => generateId('INV', accounts);
 export const generateExpenseAccountId = (accounts: ExpenseAccount[]): string => generateId('EXP', accounts);
-export const generateEmployeeId = (items: Employee[]): string => generateId('EMP', items);
+export const generateEmployeeId = (items: Employee[], type: 'Office' | 'Labour'): string => {
+    const prefix = type === 'Office' ? 'OFF' : 'LBR';
+    return generateId(prefix, items);
+};
 export const generateVehicleId = (items: Vehicle[]): string => generateId('VEH', items);
 export const generateWarehouseId = (items: Warehouse[]): string => generateId('WH', items);
 export const generateOriginalProductId = (items: OriginalProduct[]): string => generateId('OP', items);

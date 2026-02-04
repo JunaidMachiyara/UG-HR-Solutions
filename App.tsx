@@ -6,8 +6,8 @@ import Modal from './components/ui/Modal.tsx';
 import TestPage from './components/TestPage.tsx';
 import ChatModule from './components/ChatModule.tsx';
 // Standardized import path and casing
-// Fix: Use lowercase 'chatbot.tsx' to match the project files and avoid case-sensitivity conflicts.
-import Chatbot from './components/chatbot.tsx';
+// Fix: Standardized import casing to 'Chatbot.tsx' to resolve conflict with already included file name.
+import Chatbot from './components/Chatbot.tsx';
 
 // --- START: Unread Message Hooks ---
 function useUnreadMessages(userProfile: UserProfile | null = null) {
@@ -456,7 +456,7 @@ const App: React.FC = () => {
                                 {saveStatus === 'saving' && <span className="text-xs text-yellow-300 animate-pulse flex items-center justify-end">Saving...</span>}
                                 {saveStatus === 'synced' && (
                                     <span className="text-xs text-green-300 flex items-center justify-end">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                         Saved
                                     </span>
                                 )}
