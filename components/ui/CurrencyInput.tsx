@@ -16,7 +16,8 @@ const defaultConversionRates: { [key: string]: number } = {
     [Currency.AustralianDollar]: 0.66,
     [Currency.Pound]: 1.34,
     [Currency.AED]: 0.2724795640326975,
-    [Currency.SaudiRiyal]: 0.27,
+    // Fixed: Changed SaudiRiyal to Saudi_Riyal to match the property defined in the Currency enum in types.ts
+    [Currency.Saudi_Riyal]: 0.27,
     [Currency.Euro]: 1.17,
     [Currency.Dollar]: 1,
 };

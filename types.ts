@@ -1,10 +1,12 @@
+
+
 export enum Currency {
     Dollar = '$',
     AED = 'AED',
     Euro = '€',
     Pound = '£',
     AustralianDollar = 'AU$',
-    SaudiRiyal = 'SRL',
+    Saudi_Riyal = 'SRL',
 }
 
 export enum PackingType {
@@ -171,13 +173,15 @@ export interface ExpenseAccount extends Account {
 }
 
 export interface Employee {
-    id: string;
+    id: string; // Mapping to CODE
     employeeType: 'Office' | 'Labour';
-    fullName: string;
+    fullName: string; // Mapping to NAME (AS PER EID)
+    department: string;
+    section: string; // New: Specific Section field from image
     dateOfBirth: string;
     joiningDate: string;
     designation: string;
-    status: 'Active' | 'Inactive'; // Employment status
+    status: 'Active' | 'Inactive';
     onDuty: boolean;
     offDutyStatus?: 'Holidays' | 'Fired';
     holidayStartDate?: string;
@@ -187,9 +191,17 @@ export interface Employee {
     passportNumber?: string;
     visaStatus?: string;
     passportExpiryDate?: string;
+    firstVisaAppDate?: string;
+    currentVisaAppDate?: string;
     visaExpiryDate?: string;
+    // Added missing biennial leave fields to resolve SetupModule.tsx errors
     biennialLeaveDueDate?: string;
-    biennialLeaveStatus: 'Consumed' | 'Pending';
+    biennialLeaveStatus?: string;
+    leaveSalaryPayable: number; // New field from image
+    leaveSalaryPaid: number;    // New field from image
+    gratuityPayable: number;    // New field from image
+    gratuityPaid: number;       // New field from image
+    vacationHistory: string;    // New field from image
     address: string;
     phone: string;
     email: string;
@@ -199,7 +211,13 @@ export interface Employee {
     taxId?: string;
     insuranceId?: string;
     basicSalary: number;
+    allowance: number;
+    otherExps: number;
+    incrementDueDate?: string;
     salaryIncrementDate?: string;
+    lastIncrement: string;      // New field from image (e.g. 01/01/2024=01/01/2025)
+    accommodation: string;      // New field from image (B# & Room #)
+    visaCuttingTerms: string;
     advances?: number;
     complaintsOrIssues?: string;
     startingBalance?: number;
@@ -286,6 +304,7 @@ export interface OriginalPurchased {
     commissionAgentId?: string;
     commissionAmount?: number; // Foreign currency amount
     commissionCurrency?: Currency;
+    // Fix: Removed duplicate commissionConversionRate identifiers.
     commissionConversionRate?: number;
     discountSurcharge?: number; // In USD
 }

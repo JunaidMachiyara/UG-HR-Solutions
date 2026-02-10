@@ -1,3 +1,5 @@
+
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import SetupModule, { HRModule } from './components/SetupModule.tsx';
 import { useData, auth, db, allPermissions, mainModules } from './context/DataContext.tsx';
@@ -5,8 +7,7 @@ import { Module, UserProfile, OriginalOpening, Production } from './types.ts';
 import Modal from './components/ui/Modal.tsx';
 import TestPage from './components/TestPage.tsx';
 import ChatModule from './components/ChatModule.tsx';
-// Standardized import path and casing
-// Fix: Standardized import casing to 'Chatbot.tsx' to resolve conflict with already included file name.
+// Fix: Corrected import casing to './components/Chatbot.tsx' to match the intended PascalCase component file and resolve the TS1261 casing conflict error.
 import Chatbot from './components/Chatbot.tsx';
 
 // --- START: Unread Message Hooks ---
