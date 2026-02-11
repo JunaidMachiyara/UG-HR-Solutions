@@ -1,2 +1,3 @@
-// Fixed: This file acts as a re-export proxy to resolve the TypeScript error regarding filename casing conflicts between components/chatbot.tsx and components/Chatbot.tsx.
-export { default } from './Chatbot.tsx';
+// Fix: Neutered this file to resolve circular definition errors caused by casing mismatches.
+// Use components/Chatbot.tsx directly instead.
+export {};

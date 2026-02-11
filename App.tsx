@@ -5,7 +5,7 @@ import { Module, UserProfile } from './types.ts';
 import Modal from './components/ui/Modal.tsx';
 import TestPage from './components/TestPage.tsx';
 import ChatModule from './components/ChatModule.tsx';
-// Fixed: Changed import casing to PascalCase 'Chatbot.tsx' to match the standard component file name and resolve casing conflict
+// Fix: Corrected casing to match Chatbot.tsx and avoid circularity issues with the proxy file
 import Chatbot from './components/Chatbot.tsx';
 
 // --- START: Unread Message Hooks ---
