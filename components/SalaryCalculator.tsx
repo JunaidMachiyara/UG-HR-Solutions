@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useData } from '../context/DataContext.tsx';
-import { Employee, AttendanceStatus, SalaryPayment } from '../types.ts';
+import { Employee, AttendanceStatus, SalaryPayment, OvertimeRecord, OvertimePressRecord } from '../types.ts';
 
 const SalaryCalculator: React.FC = () => {
     const { state, dispatch } = useData();
@@ -34,6 +35,7 @@ const SalaryCalculator: React.FC = () => {
 
     const reportData = useMemo(() => {
         const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
 
         let employeesToProcess = state.employees.filter(emp => emp.status === 'Active');
         if (filterEmployeeId) {
@@ -41,39 +43,69 @@ const SalaryCalculator: React.FC = () => {
         }
 
         return employeesToProcess.map(employee => {
-                const yearsOfService = (new Date().getTime() - new Date(employee.joiningDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-                const dailyWage = employee.basicSalary / 30;
-                let gratuity = 0;
-                if (yearsOfService >= 1) {
-                    gratuity = (yearsOfService <= 5) ? (dailyWage * 21 * yearsOfService) : (dailyWage * 30 * yearsOfService);
+                // Time calculations
+                const joinDate = new Date(employee.joiningDate);
+                const endDate = new Date(year, month + 1, 0); // Last day of selected month
+                const yearsOfService = Math.max(0, (endDate.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+
+                // RULE: Gratuity 600 AED for Labor per Year
+                let gratuityAccrued = 0;
+                if (employee.employeeType === 'Labour') {
+                    gratuityAccrued = yearsOfService * 600;
+                } else {
+                    const dailyWage = employee.basicSalary / 30;
+                    if (yearsOfService >= 1) {
+                        gratuityAccrued = (yearsOfService <= 5) ? (dailyWage * 21 * yearsOfService) : (dailyWage * 30 * yearsOfService);
+                    }
                 }
 
+                // REVISED LAW: Vacations (Paid) 600 AED Per Year
+                const leaveSalaryAccrued = yearsOfService * 600;
+
+                // Attendance deductions
                 const attendanceForMonth = state.attendanceRecords.filter(
                     r => r.employeeId === employee.id &&
-                         new Date(r.date).getFullYear() === year &&
-                         new Date(r.date).getMonth() === month
+                         r.date.startsWith(monthStr)
                 );
 
                 const absentDays = attendanceForMonth.filter(r => r.status === AttendanceStatus.Absent).length;
                 const halfDays = attendanceForMonth.filter(r => r.status === AttendanceStatus.HalfDay).length;
-                const paidLeaveDays = attendanceForMonth.filter(r => r.status === AttendanceStatus.PaidLeave || r.status === AttendanceStatus.SickLeave).length;
-
+                
                 const unpaidDays = absentDays + (halfDays * 0.5);
-                const dailyRate = employee.basicSalary / daysInMonth;
+                const dailyRate = employee.basicSalary / 30; 
                 const deductions = unpaidDays * dailyRate;
-                const netSalary = employee.basicSalary - deductions - (employee.advances || 0);
+
+                // --- Overtime Logic ---
+                // 1. Regular Hourly OT (7 AED/hr)
+                const otRecords = state.overtimeRecords.filter(r => r.employeeId === employee.id && r.date.startsWith(monthStr));
+                const totalOtHours = otRecords.reduce((sum, r) => sum + r.hours, 0);
+                const hourlyOtAmount = totalOtHours * 7;
+
+                // 2. Press Overtime (Mixed: Hourly or Fixed Pool Amount)
+                const otPressRecords = state.overtimePressRecords.filter(r => r.employeeId === employee.id && r.date.startsWith(monthStr));
+                const pressOtAmount = otPressRecords.reduce((sum, r) => {
+                    // If 'amount' exists, it's a team-pool distribution. Otherwise, it's hourly.
+                    if (r.amount !== undefined && r.amount > 0) {
+                        return sum + r.amount;
+                    }
+                    return sum + (r.hours * 7);
+                }, 0);
+
+                const netSalary = (employee.basicSalary + employee.allowance + employee.otherExps + hourlyOtAmount + pressOtAmount) - deductions - (employee.advances || 0);
 
                 return {
                     ...employee,
                     payableDays: daysInMonth - unpaidDays,
                     deductions,
+                    otAmount: hourlyOtAmount + pressOtAmount,
+                    otHours: totalOtHours + otPressRecords.reduce((s, r) => s + (r.hours || 0), 0),
                     advances: employee.advances || 0,
                     netPayableSalary: netSalary,
-                    paidLeaveDaysThisMonth: paidLeaveDays,
-                    gratuityAmount: gratuity,
+                    gratuityAmount: gratuityAccrued,
+                    leaveSalaryAccrued: leaveSalaryAccrued,
                 };
             });
-    }, [month, year, state.employees, state.attendanceRecords, filterEmployeeId]);
+    }, [month, year, state.employees, state.attendanceRecords, state.overtimeRecords, state.overtimePressRecords, filterEmployeeId]);
 
     const handleMonthChange = (offset: number) => {
         setCurrentDate(prev => {
@@ -111,7 +143,7 @@ const SalaryCalculator: React.FC = () => {
     };
 
 
-    const formatCurrency = (val: number) => val.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    const formatCurrency = (val: number) => val.toLocaleString('en-US', { style: 'currency', currency: 'AED' }).replace('AED', 'AED ');
 
     return (
         <div className="space-y-6">
@@ -119,14 +151,14 @@ const SalaryCalculator: React.FC = () => {
 
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center space-x-2">
-                    <button onClick={() => handleMonthChange(-1)} className="p-2 rounded-md hover:bg-slate-200">&larr;</button>
-                    <h2 className="text-2xl font-bold text-slate-800 w-48 text-center">
+                    <button onClick={() => handleMonthChange(-1)} className="p-2 rounded-md hover:bg-slate-200 transition-colors">&larr;</button>
+                    <h2 className="text-2xl font-black text-slate-800 w-64 text-center uppercase tracking-tighter">
                         {new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' })}
                     </h2>
-                    <button onClick={() => handleMonthChange(1)} className="p-2 rounded-md hover:bg-slate-200">&rarr;</button>
+                    <button onClick={() => handleMonthChange(1)} className="p-2 rounded-md hover:bg-slate-200 transition-colors">&rarr;</button>
                 </div>
                  <div className="w-full md:w-1/3">
-                    <select value={filterEmployeeId} onChange={(e) => setFilterEmployeeId(e.target.value)} className="w-full p-2 border border-slate-300 rounded-md bg-white">
+                    <select value={filterEmployeeId} onChange={(e) => setFilterEmployeeId(e.target.value)} className="w-full p-2 border border-slate-300 rounded-md bg-white text-slate-900 font-bold">
                         <option value="">All Active Employees</option>
                         {state.employees.filter(emp => emp.status === 'Active').map(emp => (
                             <option key={emp.id} value={emp.id}>{emp.fullName}</option>
@@ -135,38 +167,46 @@ const SalaryCalculator: React.FC = () => {
                 </div>
             </div>
             
-            <div className="overflow-x-auto border rounded-lg bg-white">
-                <table className="w-full text-left table-auto text-sm">
-                    <thead className="bg-slate-50">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-xl">
+                <table className="w-full text-left table-auto text-[11px]">
+                    <thead className="bg-slate-50 border-b border-slate-200">
                         <tr>
-                            <th className="p-2 font-semibold text-slate-600">Employee</th>
-                            <th className="p-2 font-semibold text-slate-600 text-right">Net Payable Salary</th>
-                            <th className="p-2 font-semibold text-slate-600 text-right">Gratuity Accrued</th>
-                            <th className="p-2 font-semibold text-slate-600 text-center">Action</th>
+                            <th className="p-3 font-black text-slate-600 uppercase tracking-widest">Employee</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-right">Basic + Allow</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-right">OT Total</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-right">Deductions</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-right">Net Payable</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-right">Gratuity Accrued</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-right">Leave Sal. Accrued</th>
+                            <th className="p-3 font-black text-slate-600 uppercase text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {reportData.map(emp => {
                             const payment = salaryPaymentsMap.get(emp.id);
                             const isPayingThisRow = payingRow?.employeeId === emp.id;
+                            const totalFixed = emp.basicSalary + emp.allowance + emp.otherExps;
 
                             return (
                                 <React.Fragment key={emp.id}>
-                                    <tr className={`border-t hover:bg-slate-50 ${isPayingThisRow ? 'bg-blue-50' : ''}`}>
-                                        <td className="p-2 text-slate-700 font-medium">{emp.fullName}</td>
-                                        <td className="p-2 text-blue-600 font-bold text-right">{formatCurrency(emp.netPayableSalary)}</td>
-                                        <td className="p-2 text-slate-700 text-right">{formatCurrency(emp.gratuityAmount)}</td>
-                                        <td className="p-2 text-center">
+                                    <tr className={`border-b border-slate-100 hover:bg-blue-50/30 transition-colors ${isPayingThisRow ? 'bg-blue-50' : ''}`}>
+                                        <td className="p-3 text-slate-900 font-black uppercase">{emp.fullName} <span className="text-[9px] font-medium text-slate-400">({emp.id})</span></td>
+                                        <td className="p-3 text-slate-700 text-right font-bold">{formatCurrency(totalFixed)}</td>
+                                        <td className="p-3 text-indigo-600 text-right font-black">
+                                            {formatCurrency(emp.otAmount)}
+                                        </td>
+                                        <td className="p-3 text-red-600 text-right font-bold">{formatCurrency(emp.deductions + emp.advances)}</td>
+                                        <td className="p-3 text-blue-800 font-black text-right text-sm">{formatCurrency(emp.netPayableSalary)}</td>
+                                        <td className="p-2 text-slate-700 text-right font-medium">{formatCurrency(emp.gratuityAmount)}</td>
+                                        <td className="p-2 text-slate-700 text-right font-medium">{formatCurrency(emp.leaveSalaryAccrued)}</td>
+                                        <td className="p-3 text-center">
                                             {payment ? (
-                                                <div className="text-xs font-semibold text-green-700">
-                                                    <p>Paid via {payment.voucherId ? `Voucher ${payment.voucherId}` : payment.paymentMethod}</p>
-                                                    <p>on {payment.paymentDate}</p>
+                                                <div className="text-[10px] font-black text-green-600 bg-green-50 px-2 py-1 rounded inline-block uppercase">
+                                                    Paid: {payment.paymentMethod}
                                                 </div>
                                             ) : (
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isPayingThisRow}
-                                                    onChange={() => {
+                                                <button
+                                                    onClick={() => {
                                                         if (isPayingThisRow) {
                                                             setPayingRow(null);
                                                         } else {
@@ -174,28 +214,38 @@ const SalaryCalculator: React.FC = () => {
                                                             setPaymentDetails({ method: 'Cash', bankId: state.banks[0]?.id || '' });
                                                         }
                                                     }}
-                                                    className="h-5 w-5 rounded text-blue-600 focus:ring-blue-500"
-                                                />
+                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${isPayingThisRow ? 'bg-slate-800 text-white' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'}`}
+                                                >
+                                                    {isPayingThisRow ? 'Close' : 'Pay Now'}
+                                                </button>
                                             )}
                                         </td>
                                     </tr>
                                     {isPayingThisRow && (
-                                        <tr className="bg-slate-100">
-                                            <td colSpan={4} className="p-3">
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-semibold text-sm">Payment Method:</span>
-                                                    <div className="flex items-center gap-2 bg-white p-1 rounded-md border">
-                                                        <button onClick={() => setPaymentDetails(p => ({...p, method: 'Cash'}))} className={`px-3 py-1 text-sm rounded ${paymentDetails.method === 'Cash' ? 'bg-blue-600 text-white' : 'bg-transparent text-slate-600'}`}>Cash</button>
-                                                        <button onClick={() => setPaymentDetails(p => ({...p, method: 'Bank'}))} className={`px-3 py-1 text-sm rounded ${paymentDetails.method === 'Bank' ? 'bg-blue-600 text-white' : 'bg-transparent text-slate-600'}`}>Bank</button>
+                                        <tr className="bg-slate-900 text-white">
+                                            <td colSpan={8} className="p-4 rounded-b-xl overflow-hidden shadow-inner">
+                                                <div className="flex flex-col md:flex-row items-center gap-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-black uppercase text-slate-400 mb-1">Select Payment Mode</span>
+                                                        <div className="flex items-center gap-2 bg-slate-800 p-1 rounded-lg">
+                                                            <button onClick={() => setPaymentDetails(p => ({...p, method: 'Cash'}))} className={`px-4 py-2 text-xs font-black rounded-md uppercase transition-all ${paymentDetails.method === 'Cash' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-white'}`}>Cash</button>
+                                                            <button onClick={() => setPaymentDetails(p => ({...p, method: 'Bank'}))} className={`px-4 py-2 text-xs font-black rounded-md uppercase transition-all ${paymentDetails.method === 'Bank' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-white'}`}>Bank</button>
+                                                        </div>
                                                     </div>
+                                                    
                                                     {paymentDetails.method === 'Bank' && (
-                                                         <select value={paymentDetails.bankId} onChange={e => setPaymentDetails(p => ({...p, bankId: e.target.value}))} className="p-2 border border-slate-300 rounded-md text-sm">
-                                                            {state.banks.map(b => <option key={b.id} value={b.id}>{b.accountTitle}</option>)}
-                                                        </select>
+                                                         <div className="flex flex-col flex-grow max-w-xs">
+                                                            <span className="text-[10px] font-black uppercase text-slate-400 mb-1">Source Account</span>
+                                                            <select value={paymentDetails.bankId} onChange={e => setPaymentDetails(p => ({...p, bankId: e.target.value}))} className="p-2 bg-slate-800 border-0 rounded-lg text-xs font-black text-white focus:ring-2 focus:ring-blue-500">
+                                                                <option value="">Select Bank Account</option>
+                                                                {state.banks.map(b => <option key={b.id} value={b.id}>{b.accountTitle}</option>)}
+                                                            </select>
+                                                        </div>
                                                     )}
-                                                    <div className="ml-auto flex gap-2">
-                                                        <button onClick={() => setPayingRow(null)} className="px-4 py-2 text-sm bg-slate-300 text-slate-800 rounded-md hover:bg-slate-400">Cancel</button>
-                                                        <button onClick={handleConfirmPayment} disabled={paymentDetails.method === 'Bank' && !paymentDetails.bankId} className="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-300">Confirm Payment</button>
+                                                    
+                                                    <div className="ml-auto flex gap-3">
+                                                        <button onClick={() => setPayingRow(null)} className="px-6 py-2 text-[10px] font-black uppercase bg-slate-800 text-slate-400 rounded-lg hover:text-white transition-colors">Cancel</button>
+                                                        <button onClick={handleConfirmPayment} disabled={paymentDetails.method === 'Bank' && !paymentDetails.bankId} className="px-8 py-2 text-[10px] font-black uppercase bg-green-600 text-white rounded-lg hover:bg-green-500 shadow-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95">Confirm Salary Disbursement</button>
                                                     </div>
                                                 </div>
                                             </td>

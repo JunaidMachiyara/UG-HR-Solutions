@@ -52,7 +52,9 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({ entities, entityGroups,
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, [wrapperRef, selectedEntityId, flattenedEntities]);
 
   useEffect(() => {
@@ -193,7 +195,7 @@ const EntitySelector: React.FC<EntitySelectorProps> = ({ entities, entityGroups,
         disabled={disabled}
       />
       {isOpen && !disabled && (filteredEntities.length > 0 || (entityGroups && filteredGroups.length > 0)) && (
-        <ul ref={listRef} className="absolute z-20 w-full bg-white border border-slate-300 rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">
+        <ul ref={listRef} className="absolute z-50 w-full bg-white border border-slate-300 rounded-md mt-1 max-h-60 overflow-y-auto shadow-lg">
           {renderListItems()}
         </ul>
       )}

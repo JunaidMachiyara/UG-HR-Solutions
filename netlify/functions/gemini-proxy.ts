@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, FunctionDeclaration, Type, Content } from "@google/genai";
 
 const navigateToFunctionDeclaration: FunctionDeclaration = {
@@ -182,10 +183,10 @@ export async function handler(event: { httpMethod: string; body: string | null }
             throw new Error("API_KEY environment variable not set.");
         }
 
-        // Fix: Use 'const ai = new GoogleGenAI({apiKey: process.env.API_KEY});' as per guidelines
+        // Always use const ai = new GoogleGenAI({apiKey: process.env.API_KEY}); as per guidelines.
         const ai = new GoogleGenAI({apiKey: process.env.API_KEY});
 
-        // Fix: Use 'gemini-3-pro-preview' for tasks involving reasoning and data interaction
+        // Use 'gemini-3-pro-preview' for complex reasoning tasks.
         const response = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
             contents,

@@ -1,5 +1,4 @@
 
-
 export enum Currency {
     Dollar = '$',
     AED = 'AED',
@@ -533,6 +532,21 @@ export interface AttendanceRecord {
     reason?: string;
 }
 
+export interface OvertimeRecord {
+    id: string; // e.g., 'OT-EMP001-2024-08-05'
+    employeeId: string;
+    date: string; // YYYY-MM-DD
+    hours: number;
+}
+
+export interface OvertimePressRecord {
+    id: string; // e.g., 'OTP-EMP001-2024-08-05'
+    employeeId: string;
+    date: string; // YYYY-MM-DD
+    hours: number;
+    amount?: number; // NEW: support for pool-based monetary distribution
+}
+
 export interface SalaryPayment {
     id: string; // e.g., 'SP-EMP001-2024-08'
     employeeId: string;
@@ -656,6 +670,8 @@ export interface AppState {
     payableAccounts: Account[];
     employees: Employee[];
     attendanceRecords: AttendanceRecord[];
+    overtimeRecords: OvertimeRecord[];
+    overtimePressRecords: OvertimePressRecord[];
     salaryPayments: SalaryPayment[];
     hrTasks: HRTask[];
     hrEnquiries: HREnquiry[];

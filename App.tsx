@@ -1,13 +1,11 @@
-
-
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import SetupModule, { HRModule } from './components/SetupModule.tsx';
 import { useData, auth, db, allPermissions, mainModules } from './context/DataContext.tsx';
-import { Module, UserProfile, OriginalOpening, Production } from './types.ts';
+import { Module, UserProfile } from './types.ts';
 import Modal from './components/ui/Modal.tsx';
 import TestPage from './components/TestPage.tsx';
 import ChatModule from './components/ChatModule.tsx';
-// Fix: Corrected import casing to './components/Chatbot.tsx' to match the intended PascalCase component file and resolve the TS1261 casing conflict error.
+// Fixed: Changed import casing to PascalCase 'Chatbot.tsx' to match the standard component file name and resolve casing conflict
 import Chatbot from './components/Chatbot.tsx';
 
 // --- START: Unread Message Hooks ---
@@ -92,62 +90,58 @@ function useUnreadMessageCount(userProfile: UserProfile | null = null) {
     }, [userProfile]);
 
     useEffect(() => {
-        if (!userProfile || users.length === 0) {
-            setUnreadCount(0);
-            return;
-        }
+        if (userProfile && users.length > 0) {
+            const unreadSources = new Set<string>();
+            const updateCount = () => setUnreadCount(unreadSources.size);
 
-        const unreadSources = new Set<string>();
-        const updateCount = () => setUnreadCount(unreadSources.size);
+            const userListeners = users.map(user => {
+                const ids = [userProfile.uid, user.uid].sort();
+                const chatId = ids.join('_');
+                
+                const query = db.collection('chats').doc(chatId).collection('messages')
+                    .where('senderId', '==', user.uid);
+                
+                return query.onSnapshot((snapshot: any) => {
+                    const hasUnread = snapshot.docs.some((doc: any) => 
+                        !doc.data().readBy.includes(userProfile.uid)
+                    );
 
-        const userListeners = users.map(user => {
-            const ids = [userProfile.uid, user.uid].sort();
-            const chatId = ids.join('_');
-            
-            const query = db.collection('chats').doc(chatId).collection('messages')
-                .where('senderId', '==', user.uid);
-            
-            return query.onSnapshot((snapshot: any) => {
-                const hasUnread = snapshot.docs.some((doc: any) => 
-                    !doc.data().readBy.includes(userProfile.uid)
-                );
+                    if (hasUnread) {
+                        unreadSources.add(user.uid);
+                    } else {
+                        unreadSources.delete(user.uid);
+                    }
+                    updateCount();
+                });
+            });
 
-                if (hasUnread) {
-                    unreadSources.add(user.uid);
+            const meetingRoomQuery = db.collection('meetingRoomMessages').orderBy('timestamp', 'desc').limit(50);
+
+            const meetingRoomListener = meetingRoomQuery.onSnapshot((snapshot: any) => {
+                const hasUnreadFromOthers = snapshot.docs.some((doc: any) => {
+                    const data = doc.data();
+                    return data.senderId !== userProfile.uid && !data.readBy.includes(userProfile.uid);
+                });
+                
+                if (hasUnreadFromOthers) {
+                    unreadSources.add('meeting_room');
                 } else {
-                    unreadSources.delete(user.uid);
+                    unreadSources.delete('meeting_room');
                 }
                 updateCount();
             });
-        });
-
-        const meetingRoomQuery = db.collection('meetingRoomMessages').orderBy('timestamp', 'desc').limit(50);
-
-        const meetingRoomListener = meetingRoomQuery.onSnapshot((snapshot: any) => {
-            const hasUnreadFromOthers = snapshot.docs.some((doc: any) => {
-                const data = doc.data();
-                return data.senderId !== userProfile.uid && !data.readBy.includes(userProfile.uid);
-            });
             
-            if (hasUnreadFromOthers) {
-                unreadSources.add('meeting_room');
-            } else {
-                unreadSources.delete('meeting_room');
-            }
-            updateCount();
-        });
-        
-        const allListeners = [...userListeners, meetingRoomListener];
+            const allListeners = [...userListeners, meetingRoomListener];
 
-        return () => {
-            allListeners.forEach(unsubscribe => unsubscribe());
-        };
+            return () => {
+                allListeners.forEach(unsubscribe => unsubscribe());
+            };
+        }
     }, [users, userProfile]);
 
     return unreadCount;
 }
 // --- END: Unread Message Hooks ---
-
 
 const Notification: React.FC<{ message: string; type: 'success' | 'error'; onDismiss: () => void }> = ({ message, type, onDismiss }) => {
     useEffect(() => {
@@ -193,10 +187,6 @@ const LoginScreen: React.FC<{ setNotification: (n: any) => void; }> = ({ setNoti
         await performLogin();
     };
     
-    const handleFastLogin = async () => {
-        await performLogin();
-    };
-    
     return (
         <div className="min-h-screen flex items-center justify-center login-screen p-4">
             <div className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 space-y-6">
@@ -210,16 +200,6 @@ const LoginScreen: React.FC<{ setNotification: (n: any) => void; }> = ({ setNoti
                     <div><label className="block text-sm font-medium text-slate-700">Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="mt-1 w-full p-3 rounded-lg"/></div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
                     <button type="submit" disabled={isLoading} className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-400 transition-colors">{isLoading ? 'Signing In...' : 'Sign In'}</button>
-                     <div className="text-center">
-                        <button
-                            type="button"
-                            onClick={handleFastLogin}
-                            disabled={isLoading}
-                            className="text-sm text-blue-600 hover:underline"
-                        >
-                            Fast Login (Dev)
-                        </button>
-                    </div>
                 </form>
             </div>
         </div>
@@ -235,8 +215,6 @@ const App: React.FC = () => {
     const unreadSenderNames = useUnreadMessages(userProfile);
     const unreadMessageCount = useUnreadMessageCount(userProfile);
 
-
-    const [isNewItemModalOpen, setIsNewItemModalOpen] = useState<boolean>(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -267,7 +245,6 @@ const App: React.FC = () => {
         prevSubViewRef.current = activeSubView;
     }, [activeModule, activeSubView]);
 
-
     const handleNavigation = (module: Module, subView?: string) => {
         if (activeModule !== module) {
             setActiveModule(module);
@@ -279,9 +256,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             const target = event.target as HTMLElement;
-            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) {
-                return;
-            }
+            if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) { return; }
 
             const functionKeyMap: { [key: string]: Module } = {
                 'F3': 'setup',
@@ -297,13 +272,11 @@ const App: React.FC = () => {
             
             if (event.key === 'Escape') {
                 if (event.defaultPrevented) { return; }
-
                 if (showEscapeConfirm) {
                     if (navigationHistory.length > 0) {
                         event.preventDefault();
                         const newHistory = [...navigationHistory];
                         const lastState = newHistory.pop();
-                        
                         if (lastState) {
                             isNavigatingBackRef.current = true;
                             setNavigationHistory(newHistory);
@@ -312,60 +285,35 @@ const App: React.FC = () => {
                         }
                     }
                     setShowEscapeConfirm(false);
-                    if (escapeConfirmTimeoutRef.current !== null) {
-                        clearTimeout(escapeConfirmTimeoutRef.current);
-                    }
+                    if (escapeConfirmTimeoutRef.current !== null) { clearTimeout(escapeConfirmTimeoutRef.current); }
                     return;
                 }
-    
                 if (navigationHistory.length > 0) {
                     event.preventDefault();
                     setShowEscapeConfirm(true);
-                    if (escapeConfirmTimeoutRef.current !== null) {
-                        clearTimeout(escapeConfirmTimeoutRef.current);
-                    }
-                    escapeConfirmTimeoutRef.current = window.setTimeout(() => {
-                        setShowEscapeConfirm(false);
-                    }, 3000);
+                    if (escapeConfirmTimeoutRef.current !== null) { clearTimeout(escapeConfirmTimeoutRef.current); }
+                    escapeConfirmTimeoutRef.current = window.setTimeout(() => { setShowEscapeConfirm(false); }, 3000);
                 }
                 return; 
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            if (escapeConfirmTimeoutRef.current !== null) {
-                clearTimeout(escapeConfirmTimeoutRef.current);
-            }
+            if (escapeConfirmTimeoutRef.current !== null) { clearTimeout(escapeConfirmTimeoutRef.current); }
         };
     }, [navigationHistory, showEscapeConfirm]);
 
-    const handleNewItemSaved = () => {
-        setNotification({ msg: "Item created successfully!", type: 'success' });
-        setIsNewItemModalOpen(false);
-    };
-    
     useEffect(() => {
         if (userProfile && !userProfile.isAdmin && !userProfile.permissions.includes(activeModule)) {
             const firstPermission = userProfile.permissions[0] || 'setup';
             const firstModule = firstPermission.split('/')[0] as Module;
-            if (mainModules.includes(firstModule)) {
-                handleNavigation(firstModule);
-            } else {
-                handleNavigation('setup');
-            }
+            if (mainModules.includes(firstModule)) { handleNavigation(firstModule); } else { handleNavigation('setup'); }
         }
     }, [activeModule, userProfile]);
     
     const handleLogout = async () => {
-        if (auth) {
-            try {
-                await (auth as any).signOut();
-            } catch (error) {
-                console.error("Error signing out: ", error);
-            }
-        }
+        if (auth) { try { await (auth as any).signOut(); } catch (error) { console.error("Error signing out: ", error); } }
     };
     
     const hasAccess = (module: Module): boolean => {
@@ -375,12 +323,8 @@ const App: React.FC = () => {
         return false;
     }
 
-
     const renderModule = () => {
-        if(!userProfile || !hasAccess(activeModule)) {
-             return null;
-        }
-
+        if(!userProfile || !hasAccess(activeModule)) { return null; }
         switch (activeModule) {
             case 'setup': return <SetupModule setModule={(m) => handleNavigation(m)} userProfile={userProfile} initialSection={activeSubView} />;
             case 'hr': return <HRModule userProfile={userProfile} initialView={activeSubView} />;
@@ -409,13 +353,8 @@ const App: React.FC = () => {
         );
     };
 
-    if (authLoading) {
-        return <div className="min-h-screen flex items-center justify-center"><p>Loading Application...</p></div>;
-    }
-    
-    if (!userProfile) {
-        return <LoginScreen setNotification={setNotification} />;
-    }
+    if (authLoading) { return <div className="min-h-screen flex items-center justify-center"><p>Loading Application...</p></div>; }
+    if (!userProfile) { return <LoginScreen setNotification={setNotification} />; }
 
     return (
         <div className="min-h-screen bg-slate-100 no-print">
@@ -423,22 +362,14 @@ const App: React.FC = () => {
             {unreadNotification && (
                 <div className="fixed top-20 right-5 bg-blue-600 text-white py-3 px-5 rounded-lg shadow-lg z-50 flex items-center gap-4 animate-fade-in-out-short">
                     <span>{unreadNotification}</span>
-                    <button
-                        onClick={() => { handleNavigation('chat'); setUnreadNotification(null); }}
-                        className="font-bold bg-white/20 hover:bg-white/40 px-3 py-1 rounded"
-                    >
-                        View
-                    </button>
+                    <button onClick={() => { handleNavigation('chat'); setUnreadNotification(null); }} className="font-bold bg-white/20 hover:bg-white/40 some-btn px-3 py-1 rounded">View</button>
                     <button onClick={() => setUnreadNotification(null)} className="font-bold text-white/70 hover:text-white">✕</button>
                 </div>
             )}
             <header className="bg-blue-600 text-white shadow-md sticky top-0 z-40 no-print">
                 <div className="container mx-auto px-4 py-3 flex justify-between items-center">
                     <div className="flex items-center space-x-3">
-                        <button 
-                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                            className="lg:hidden text-white focus:outline-none"
-                        >
+                        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden text-white focus:outline-none">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                             </svg>
@@ -455,12 +386,7 @@ const App: React.FC = () => {
                         <div className="flex items-center space-x-3 border-l border-blue-500 pl-4">
                             <div className="w-36 text-right hidden md:block">
                                 {saveStatus === 'saving' && <span className="text-xs text-yellow-300 animate-pulse flex items-center justify-end">Saving...</span>}
-                                {saveStatus === 'synced' && (
-                                    <span className="text-xs text-green-300 flex items-center justify-end">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                        Saved
-                                    </span>
-                                )}
+                                {saveStatus === 'synced' && ( <span className="text-xs text-green-300 flex items-center justify-end"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Saved</span> )}
                             </div>
                             <button onClick={() => setIsHelpModalOpen(true)} title="Shortcuts" className="p-2 text-white hover:bg-blue-700 rounded-full hidden md:block">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -475,7 +401,6 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
                 {isMobileMenuOpen && (
                     <div className="lg:hidden absolute top-full left-0 w-full bg-blue-700 shadow-lg z-50 border-t border-blue-500">
                         <div className="flex flex-col p-4 space-y-2">
@@ -489,15 +414,6 @@ const App: React.FC = () => {
             <main className="container mx-auto p-2 md:p-8">
                 {renderModule()}
             </main>
-            {isNewItemModalOpen && (
-                <SetupModule
-                    isModalMode={true}
-                    modalTarget="items"
-                    onModalClose={() => setIsNewItemModalOpen(false)}
-                    onModalSave={handleNewItemSaved}
-                    userProfile={userProfile}
-                />
-            )}
             <Modal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} title="Keyboard Shortcuts" size="2xl">
                 <div className="space-y-6 text-slate-700">
                     <div>
@@ -510,11 +426,7 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </Modal>
-            {showEscapeConfirm && (
-                <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg z-50 animate-fade-in-out-short font-semibold">
-                    Press Escape again to go back
-                </div>
-            )}
+            {showEscapeConfirm && ( <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg z-50 animate-fade-in-out-short font-semibold">Press Escape again to go back</div> )}
             <Chatbot onNavigate={handleNavigation} />
         </div>
     );

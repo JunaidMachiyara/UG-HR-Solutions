@@ -57,7 +57,7 @@ export const dataEntrySubModules = [
 // Cleaned up permissions list for the simplified app
 export const allPermissions = [
     ...mainModules,
-    'hr/payroll', 'hr/tasks', 'hr/enquiries', 'hr/vehicles', 'hr/attendance',
+    'hr/payroll', 'hr/tasks', 'hr/enquiries', 'hr/vehicles', 'hr/attendance', 'hr/overtime', 'hr/overtime-press',
     'setup/customers', 'setup/suppliers', 'setup/items', 'setup/divisions'
 ];
 // --- END: PERMISSIONS SETUP ---
@@ -170,6 +170,8 @@ const getInitialState = (): AppState => {
         ],
 
         attendanceRecords: [],
+        overtimeRecords: [],
+        overtimePressRecords: [],
         salaryPayments: [],
         hrTasks: [],
         hrEnquiries: [],
@@ -265,6 +267,8 @@ const dataReducer = (state: AppState, action: Action): AppState => {
                 ongoingOrders: [],
                 logisticsEntries: [],
                 attendanceRecords: [],
+                overtimeRecords: [],
+                overtimePressRecords: [],
                 salaryPayments: [],
                 hrTasks: [],
                 hrEnquiries: [],
@@ -379,6 +383,8 @@ const dataReducer = (state: AppState, action: Action): AppState => {
                     payableAccounts: firestoreState.payableAccounts || defaultState.payableAccounts,
                     employees: firestoreState.employees || defaultState.employees,
                     attendanceRecords: firestoreState.attendanceRecords || defaultState.attendanceRecords,
+                    overtimeRecords: firestoreState.overtimeRecords || defaultState.overtimeRecords,
+                    overtimePressRecords: firestoreState.overtimePressRecords || defaultState.overtimePressRecords,
                     salaryPayments: firestoreState.salaryPayments || defaultState.salaryPayments,
                     hrTasks: firestoreState.hrTasks || defaultState.hrTasks,
                     hrEnquiries: firestoreState.hrEnquiries || defaultState.hrEnquiries,
