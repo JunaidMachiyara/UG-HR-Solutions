@@ -5,8 +5,6 @@ import { Module, UserProfile } from './types.ts';
 import Modal from './components/ui/Modal.tsx';
 import TestPage from './components/TestPage.tsx';
 import ChatModule from './components/ChatModule.tsx';
-// Fix: Corrected casing to match Chatbot.tsx and avoid circularity issues with the proxy file
-import Chatbot from './components/Chatbot.tsx';
 
 // --- START: Unread Message Hooks ---
 function useUnreadMessages(userProfile: UserProfile | null = null) {
@@ -427,7 +425,6 @@ const App: React.FC = () => {
                 </div>
             </Modal>
             {showEscapeConfirm && ( <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg z-50 animate-fade-in-out-short font-semibold">Press Escape again to go back</div> )}
-            <Chatbot onNavigate={handleNavigation} />
         </div>
     );
 };
